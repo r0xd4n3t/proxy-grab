@@ -22,7 +22,15 @@ Proxy Grabber
 This is a Python script that fetches a list of free proxy servers from a website, removes duplicates, and tests each proxy server to see if it is working. It then saves the working proxies to a file called "working_proxies.txt" and prints five random working proxies to the console.
 
 ## 🕹️ Usage
-To use the script, save it as a Python file (e.g., proxy_tester.py) and run it from the command line using Python. The script takes one optional argument, "-t" or "--test", which tells it to test the proxies. To test the proxies, run the script with the argument: "python proxy_tester.py -t". Otherwise, simply run the script with "python proxy_tester.py".
+To use the script, save it as a Python file (e.g., proxy_tester.py) and run it from the command line using Python. The script takes one optional argument, "-t" or "--test", which tells it to test the proxies.
+
+To test the proxies, run the script with the argument: 
+
+```python proxy_grabber.py -t```
+
+Otherwise, simply run the script with 
+
+```python proxy_tester.py``` to grab proxy list
 
 ## 📝 Prerequisites
 The script requires the installation of the following Python modules:
