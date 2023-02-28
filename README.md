@@ -32,6 +32,8 @@ Otherwise, simply run the script with
 
 ```python proxy_grabber.py``` to grab proxy list
 
+<img src="https://raw.githubusercontent.com/r0xd4n3t/proxy-grab/main/img/1.png"></img>
+
 ## 📝 Prerequisites
 The script requires the installation of the following Python modules:
 
