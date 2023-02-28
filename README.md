@@ -30,7 +30,7 @@ To test the proxies, run the script with the argument:
 
 Otherwise, simply run the script with 
 
-```python proxy_tester.py``` to grab proxy list
+```python proxy_grabber.py``` to grab proxy list
 
 ## 📝 Prerequisites
 The script requires the installation of the following Python modules:
