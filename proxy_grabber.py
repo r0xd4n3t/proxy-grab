@@ -14,7 +14,7 @@ def test_proxy(proxy: str, http_url: str, https_url: str) -> bool:
         http_proxy = {"http": f"http://{proxy}", "https": f"https://{proxy}"}
         http_response = requests.get(http_url, proxies=http_proxy, timeout=5)
         http_response.raise_for_status()
-        pass
+        print(f'[+] HTTP proxy {proxy} is working')
         return True
     except requests.exceptions.RequestException:
         pass
@@ -23,7 +23,7 @@ def test_proxy(proxy: str, http_url: str, https_url: str) -> bool:
         https_proxy = {"http": f"http://{proxy}", "https": f"https://{proxy}"}
         https_response = requests.get(https_url, proxies=https_proxy, timeout=5)
         https_response.raise_for_status()
-        pass
+        print(f'[+] HTTPS proxy {proxy} is working')
         return True
     except requests.exceptions.RequestException:
         pass
