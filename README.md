@@ -56,6 +56,10 @@ Finally, the script saves the working proxies to a file named "working_proxies.t
 
 ![](https://raw.githubusercontent.com/r0xd4n3t/proxy-grab/main/img/https.png)
 
+> http
+
+![](https://raw.githubusercontent.com/r0xd4n3t/proxy-grab/main/img/http.png)
+
 ## 📝 Prerequisites
 To run this script, you will need to have Python 3.x installed on your computer, as well as the following Python packages:
 
