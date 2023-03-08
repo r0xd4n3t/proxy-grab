@@ -1,191 +1,200 @@
 import argparse
-import concurrent.futures
 import requests
-import random
+import re
+import socks
+import sys
+import socket
+from concurrent.futures import ThreadPoolExecutor
 from bs4 import BeautifulSoup
-from typing import List
 
-def write_to_file(data: List[str], filename: str) -> None:
-    with open(filename, "w") as f:
-        f.write("\n".join(data))
+# Define the URLs to use for grabbing proxy lists
+PROXY_LIST_URLS = [
+#    'https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http',
+    'https://api.proxyscrape.com/v2/?request=displayproxies&protocol=https',
+#    'https://api.proxyscrape.com/v2/?request=displayproxies&protocol=socks4',
+#    'https://api.proxyscrape.com/v2/?request=displayproxies&protocol=socks5',
+#    'https://free-proxy-list.net/',
+#    'https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/proxy.txt',
+#    'https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/socks4.txt',
+#    'https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/socks5.txt',
+#    'https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/http.txt',
+#    'https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/socks4.txt',
+#    'https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/socks5.txt',
+#    'https://raw.githubusercontent.com/hookzof/socks5_list/master/proxy.txt',
+#    'https://raw.githubusercontent.com/jetkai/proxy-list/main/online-proxies/txt/proxies-http.txt',
+#    'https://raw.githubusercontent.com/jetkai/proxy-list/main/online-proxies/txt/proxies-https.txt',
+#    'https://raw.githubusercontent.com/jetkai/proxy-list/main/online-proxies/txt/proxies-socks4.txt',
+#    'https://raw.githubusercontent.com/jetkai/proxy-list/main/online-proxies/txt/proxies-socks5.txt',
+#    'https://raw.githubusercontent.com/jetkai/proxy-list/main/online-proxies/txt/proxies.txt',
+#    'https://raw.githubusercontent.com/mertguvencli/http-proxy-list/main/proxy-list/data.txt',
+#    'https://raw.githubusercontent.com/roosterkid/openproxylist/main/HTTPS_RAW.txt',
+#    'https://raw.githubusercontent.com/roosterkid/openproxylist/main/SOCKS4_RAW.txt',
+#    'https://raw.githubusercontent.com/roosterkid/openproxylist/main/SOCKS5_RAW.txt',
+#    'https://raw.githubusercontent.com/sunny9577/proxy-scraper/master/proxies.txt',
+#    'https://www.proxy-list.download/api/v1/get?type=https'
+]
 
-def test_proxy(proxy: str, url: str, proxies: dict) -> bool:
-    try:
-        response = requests.get(url, proxies=proxies, timeout=10)
-        response.raise_for_status()
-        return True
-    except requests.exceptions.RequestException:
-        pass
-    return False
+# Define the filename to save the proxy list to
+PROXY_LIST_FILE = 'proxy_list.txt'
 
-def test_http_proxies(proxies: List[str], verbose: bool) -> List[str]:
-    working_proxies = []
-    url = "http://checkip.dyndns.org/"
-    for i, proxy in enumerate(proxies):
-        if test_proxy(proxy, url, None):
-            working_proxies.append(proxy)
-        if verbose:
-            print(f"[*] Testing {i+1}/{len(proxies)} subset of the total HTTP proxies", end="\r")
-    if verbose:
-        print()
-    return working_proxies
+# Define a function to extract the IP address from a proxy address
+def extract_ip(proxy):
+    match = re.search(r'(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})', proxy)
+    return match.group(1) if match else None
 
-def test_https_proxies(proxies: List[str], verbose: bool) -> List[str]:
-    working_proxies = []
-    url = "https://checkip.dyndns.org/"
-    count = 0
-    for proxy in proxies:
-        count += 1
-        if test_proxy(proxy, url, None):
-            working_proxies.append(proxy)
-        if verbose:
-            print(f"[*] Testing {count}/{len(proxies)} subset of the total HTTPS proxies", end="\r")
-    return working_proxies
-
-def test_socks_proxies(proxies: List[str], http_url: str, https_url: str, socks4: bool, socks5: bool, verbose: bool) -> List[str]:
-    working_proxies = []
-    count = 0
-    for i in range(0, len(proxies), chunk_size):
-        chunk = proxies[i:i + chunk_size]
-        count += len(chunk)
-        if socks4:
-            proxy_type = "SOCKS4"
-            proxy_dict = {"http": f"socks4://{random.choice(chunk)}", "https": f"socks4://{random.choice(chunk)}"}
-        elif socks5:
-            proxy_type = "SOCKS5"
-            proxy_dict = {"http": f"socks5://{random.choice(chunk)}", "https": f"socks5://{random.choice(chunk)}"}
-        else:
-            proxy_type = "HTTP"
-            proxy_dict = {"http": f"http://{random.choice(chunk)}", "https": f"https://{random.choice(chunk)}"}
-        
-        results = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
-            futures = []
-            for proxy in chunk:
-                futures.append(executor.submit(test_proxy, proxy, http_url, proxy_dict))
-                futures.append(executor.submit(test_proxy, proxy, https_url, proxy_dict))
-
-            for future in concurrent.futures.as_completed(futures):
-                results.append(future.result())
-
-        for proxy, result in zip(chunk, results[::2]):
-            if result and results[results.index(result) + 1]:
-                working_proxies.append(proxy)
-
-        if verbose:
-            subset_size = min(len(proxies) - (count - 1), chunk_size)
-            print(f"[*] Testing {count - len(chunk)}-{count - 1}/{len(proxies)} {proxy_type} proxies", end="\r")
-    return working_proxies
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-s4", "--socks4", action="store_true", help="Test SOCKS4 proxies")
-    parser.add_argument("-s5", "--socks5", action="store_true", help="Test SOCKS5 proxies")
-    parser.add_argument("-http", "--http", action="store_true", help="Test HTTP proxies")
-    parser.add_argument("-https", "--https", action="store_true", help="Test HTTPS proxies")
-    parser.add_argument("-v", "--verbose", action="store_true", help="Verbose mode")
-    args = parser.parse_args()
-
-    urls = [
-        "https://free-proxy-list.net/",
-        "https://api.proxyscrape.com/?request=displayproxies&proxytype=http",
-        "https://api.proxyscrape.com/?request=displayproxies&proxytype=https",
-        "https://api.proxyscrape.com/?request=displayproxies&proxytype=socks4",
-        "https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/socks5.txt",
-        "https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/socks4.txt",
-        "https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/proxy.txt",
-        "https://api.proxyscrape.com/?request=displayproxies&proxytype=socks5"
-    ]
-
+def grab_proxy_list(url, proxy_types, counter, total):
+    print(f"[*] Fetching data from the server {counter}/{total} ...please wait")
     proxies = []
-    for url in urls:
-        if args.verbose:
-            print(f"[*] Fetching data from {url} ...please wait")
-        try:
-            response = requests.get(url)
-            response.raise_for_status()
-        except requests.exceptions.RequestException as err:
-            print(f"An error occurred: {err}")
-            continue
-        if url == "https://free-proxy-list.net/":
-            soup = BeautifulSoup(response.content, "html.parser")
-            table = soup.find("table")
-            rows = table.find_all("tr")
-            proxies += [f"{row.contents[0].text.strip()}:{row.contents[1].text.strip()}" for row in rows[1:]]
+    try:
+        response = requests.get(url, timeout=7)
+        if response.status_code == 200:
+            if url == "https://free-proxy-list.net/":
+                soup = BeautifulSoup(response.content, "html.parser")
+                table = soup.find("table")
+                rows = table.find_all("tr")
+                proxies += [f"{row.contents[0].text.strip()}:{row.contents[1].text.strip()}" for row in rows[1:]]
+            else:
+                proxies += response.text.splitlines()
+
+            # Check each proxy to see if it's valid and add it to the list if it is
+            for proxy in proxies:
+                parts = proxy.split(':')
+                if len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit():
+                    if '-http' in proxy_types and url.startswith('http.txt'):
+                        proxies.append(proxy)
+                    elif '-https' in proxy_types and url.endswith('https.txt'):
+                        proxies.append(proxy)
+                    elif '-s4' in proxy_types and url.endswith('socks4.txt'):
+                        proxies.append(proxy)
+                    elif '-s5' in proxy_types and url.endswith('socks5.txt'):
+                        proxies.append(proxy)
+                    elif not proxy_types:
+                        # If no proxy types are specified, add all proxies to the list
+                        proxies.append(proxy)
+    except:
+        pass
+    return proxies
+
+# Parse command-line arguments for the proxy types to test
+parser = argparse.ArgumentParser(description='Test proxy servers for availability')
+parser.add_argument('-s4', action='store_true', help='test SOCKS4 proxies only')
+parser.add_argument('-s5', action='store_true', help='test SOCKS5 proxies only')
+parser.add_argument('-http', action='store_true', help='test HTTP proxies only')
+parser.add_argument('-https', action='store_true', help='test HTTPS proxies only')
+args = parser.parse_args()
+
+# Show help if no arguments are given
+if len(sys.argv) == 1:
+    parser.print_help(sys.stderr)
+    sys.exit(1)
+
+# Grab the proxy lists from each URL and add them to a set
+proxy_types = []
+if args.s4:
+    proxy_types.append('-s4')
+if args.s5:
+    proxy_types.append('-s5')
+if args.http:
+    proxy_types.append('-http')
+if args.https:
+    proxy_types.append('-https')
+    
+proxies = []
+num_urls = len(PROXY_LIST_URLS)
+with ThreadPoolExecutor(max_workers=11) as executor:
+    results = executor.map(lambda i, url: grab_proxy_list(url, proxy_types, i+1, num_urls), range(num_urls), PROXY_LIST_URLS)
+    for result in results:
+        proxies.extend(result)
+
+# Remove duplicates from the proxy list
+num_proxies_before = len(proxies)
+proxies = set([proxy for proxy in proxies if proxy.strip()])
+
+# Save the list of unique proxies to a file
+with open(PROXY_LIST_FILE, 'w') as f:
+    f.writelines([f'{proxy}\n' for proxy in proxies])
+
+num_proxies_after = len(proxies)
+
+print(f"[+] Fetched and saved {num_proxies_before} proxies to {PROXY_LIST_FILE}")
+print(f"[-] Removed {num_proxies_before - num_proxies_after} duplicates, {num_proxies_after} unique proxies remaining\n")
+
+# Define the URLs to use for testing proxies
+TEST_HTTP_URL = 'http://httpbin.org/ip'
+TEST_HTTPS_URL = 'https://httpbin.org/ip'
+TEST_SOCKS4_URL = 'http://httpbin.org/ip'
+TEST_SOCKS5_URL = 'https://httpbin.org/ip'
+
+# Define dictionaries to store the working proxies for each protocol
+working_http_proxies = {}
+working_https_proxies = {}
+working_socks4_proxies = {}
+working_socks5_proxies = {}
+
+# Define a function to test the availability of a proxy for a given protocol
+def test_proxy(proxy, protocol):
+    proxies = {protocol: proxy}
+    try:
+        if protocol.startswith('http') or protocol.startswith('https') or protocol.startswith('socks4') or protocol.startswith('socks5'):
+            if protocol.startswith('http') or protocol.startswith('https'):
+                url = TEST_HTTPS_URL if protocol.startswith('https') else TEST_HTTP_URL
+                response = requests.get(url, proxies=proxies, timeout=7)
+            elif protocol.startswith('socks4'):
+                socks.set_default_proxy(socks.SOCKS4, proxy.split(':')[0], int(proxy.split(':')[1]))
+                socket.socket = socks.socksocket
+                response = requests.get(TEST_SOCKS4_URL, timeout=7)
+            elif protocol.startswith('socks5'):
+                socks.set_default_proxy(socks.SOCKS5, proxy.split(':')[0], int(proxy.split(':')[1]))
+                socket.socket = socks.socksocket
+                response = requests.get(TEST_SOCKS5_URL, timeout=7)
+            
+            ip_address = extract_ip(response.content.decode())
+            if ip_address is not None and ip_address != '':
+                if ip_address == proxy.split(':')[0]:
+                    if protocol == 'http':
+                        working_http_proxies[proxy] = ip_address
+                        print(f'[+] Found HTTP Proxy: {proxy}')
+                    elif protocol == 'https':
+                        working_https_proxies[proxy] = ip_address
+                        print(f'[+] Found HTTPS Proxy: {proxy}')
+                    elif protocol == 'socks4':
+                        working_socks4_proxies[proxy] = ip_address
+                        print(f'[+] Found SOCKS4 Proxy: {proxy}')
+                    elif protocol == 'socks5':
+                        working_socks5_proxies[proxy] = ip_address
+                        print(f'[+] Found SOCKS5 Proxy: {proxy}')
+                    return True
+            return False
+    except:
+        return False
+
+# Loop through the list of proxies and test their availability for the selected protocol
+with ThreadPoolExecutor(max_workers=1000) as executor:
+    for proxy in proxies:
+        if args.s4:
+            protocol = 'socks4'
+        elif args.s5:
+            protocol = 'socks5'
+        elif args.https:
+            protocol = 'https'
+        elif args.http:
+            protocol = 'http'
         else:
-            proxies += response.text.splitlines()
+            # Test all protocols if no specific protocol is selected
+            for protocol in ['socks4', 'socks5', 'https', 'http']:
+                executor.submit(test_proxy, proxy, protocol)
+            break  # exit the loop after submitting all jobs
 
-    write_to_file(proxies, "proxy.txt")
-    print(f"[+] Saved {len(proxies)} proxies to proxy.txt")
+        executor.submit(test_proxy, proxy, protocol)
 
-    with open("proxy.txt", "r") as f:
-        proxies = [proxy.strip() for proxy in f]
-        if args.verbose:
-            print("[*] Removing duplicates...please wait")
-        proxies = list(set(proxies))
-        write_to_file(proxies, "proxy.txt")
-        print(f"[+] Removed duplicates, {len(proxies)} unique proxies remaining")
-    if args.http:
-        num_threads = 20
-        chunk_size = len(proxies) // num_threads
-        print(f"[*] Testing {len(proxies)} HTTP proxies using {num_threads} threads...please wait")
-        with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
-            futures = []
-            for i in range(num_threads):
-                chunk = proxies[i * chunk_size : (i + 1) * chunk_size]
-                futures.append(executor.submit(test_http_proxies, chunk, args.verbose))
-            working_proxies = []
-            for future in concurrent.futures.as_completed(futures):
-                working_proxies.extend(future.result())
-        write_to_file(working_proxies, "working_proxies.txt")
-        print(f"[+] Saved {len(working_proxies)} working HTTP proxies to working_proxies.txt")
-    elif args.https:
-        num_threads = 20
-        chunk_size = len(proxies) // num_threads
-        print(f"[*] Testing {len(proxies)} HTTPS proxies using {num_threads} threads...please wait")
-        with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
-            futures = []
-            for i in range(num_threads):
-                chunk = proxies[i * chunk_size : (i + 1) * chunk_size]
-                futures.append(executor.submit(test_https_proxies, chunk, verbose=args.verbose)) # added verbose argument
-            working_proxies = []
-            for future in concurrent.futures.as_completed(futures):
-                working_proxies.extend(future.result())
-        write_to_file(working_proxies, "working_proxies.txt")
-        print(f"[+] Saved {len(working_proxies)} working HTTPS proxies to working_proxies.txt")
-    elif args.socks4:
-        socks4 = True
-        http_url = "http://checkip.dyndns.org/"
-        https_url = "https://checkip.dyndns.org/"
-        num_threads = 20
-        chunk_size = len(proxies) // num_threads
-        print(f"[*] Testing {len(proxies)} SOCKS4 proxies using {num_threads} threads...please wait")
-        with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
-            futures = []
-            for i in range(num_threads):
-                chunk = proxies[i * chunk_size : (i + 1) * chunk_size]
-                futures.append(executor.submit(test_socks_proxies, chunk, http_url, https_url, socks4, False, verbose=args.verbose)) # added verbose argument
-            working_proxies = []
-            for future in concurrent.futures.as_completed(futures):
-                working_proxies.extend(future.result())
-        write_to_file(working_proxies, "working_proxies.txt")
-        print(f"[+] Saved {len(working_proxies)} working SOCKS4 proxies to working_proxies.txt")
-    elif args.socks5:
-        socks5 = True
-        http_url = "http://checkip.dyndns.org/"
-        https_url = "https://checkip.dyndns.org/"
-        num_threads = 20
-        chunk_size = len(proxies) // num_threads
-        print(f"[*] Testing {len(proxies)} SOCKS5 proxies using {num_threads} threads...please wait")
-        with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
-            futures = []
-            for i in range(num_threads):
-                chunk = proxies[i * chunk_size : (i + 1) * chunk_size]
-                futures.append(executor.submit(test_socks_proxies, chunk, http_url, https_url, False, socks5, args.verbose))
-            working_proxies = []
-            for i, future in enumerate(concurrent.futures.as_completed(futures)):
-                progress = f"[*] Testing {i+1}/{num_threads} SOCKS5"
-                print(f"\r{progress}", end="")
-                working_proxies.extend(future.result())
-        write_to_file(working_proxies, "working_proxies.txt")
-        print(f"\n[+] Saved {len(working_proxies)} working SOCKS5 proxies to working_proxies.txt")
+# Save the working proxies to separate files based on their protocol
+with open('http.txt', 'a') as f:
+    f.writelines([f'{proxy}\n' for proxy in working_http_proxies.keys()])
+with open('https.txt', 'a') as f:
+    f.writelines([f'{proxy}\n' for proxy in working_https_proxies.keys()])
+with open('socks4.txt', 'a') as f:
+    f.writelines([f'{proxy}\n' for proxy in working_socks4_proxies.keys()])
+with open('socks5.txt', 'a') as f:
+    f.writelines([f'{proxy}\n' for proxy in working_socks5_proxies.keys()])
+
+print('\n[*] Testing complete. Results saved to http.txt, https.txt, socks4.txt, and socks5.txt')
