@@ -21,6 +21,8 @@ Proxy Grabber
 # 📜 Proxy Grabber
 This is a Python script that can be used to test the availability of proxy servers. The script can fetch proxy lists from various sources, test them for availability, and save the working proxies to separate files based on their protocol. The supported proxy protocols are HTTP, HTTPS, SOCKS4, and SOCKS5.
 
+Keep in mind that the speed of the testing process will also depend on the number of proxies you are testing, the quality of the proxies, and the speed of your internet connection.
+
 ## 🕹️ Usage
 To run the script, open a terminal in the directory containing the script and run the following command:
 
@@ -68,6 +70,5 @@ You can install these packages using pip, the package installer for Python. To i
 ```
 pip install requests beautifulsoup4 PySocks
 ```
-
 
 <p align="center"><a href=#top>Back to Top</a></p>
