@@ -60,17 +60,22 @@ def grab_proxy_list(url, proxy_types, counter, total):
             for proxy in proxies:
                 parts = proxy.split(':')
                 if len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit():
-                    if '-http' in proxy_types and url.startswith('http.txt'):
-                        proxies.append(proxy)
+                    if '-http' in proxy_types and url.endswith('http.txt'):
+                        with open('http.txt', 'a') as f:
+                            f.write(f'{proxy}\n')
                     elif '-https' in proxy_types and url.endswith('https.txt'):
-                        proxies.append(proxy)
+                        with open('https.txt', 'a') as f:
+                            f.write(f'{proxy}\n')
                     elif '-s4' in proxy_types and url.endswith('socks4.txt'):
-                        proxies.append(proxy)
+                        with open('socks4.txt', 'a') as f:
+                            f.write(f'{proxy}\n')
                     elif '-s5' in proxy_types and url.endswith('socks5.txt'):
-                        proxies.append(proxy)
+                        with open('socks5.txt', 'a') as f:
+                            f.write(f'{proxy}\n')
                     elif not proxy_types:
                         # If no proxy types are specified, add all proxies to the list
-                        proxies.append(proxy)
+                        with open(PROXY_LIST_FILE, 'a') as f:
+                            f.write(f'{proxy}\n')
     except:
         pass
     return proxies
@@ -98,7 +103,7 @@ if args.http:
     proxy_types.append('-http')
 if args.https:
     proxy_types.append('-https')
-    
+
 proxies = []
 num_urls = len(PROXY_LIST_URLS)
 with ThreadPoolExecutor(max_workers=11) as executor:
@@ -111,13 +116,17 @@ num_proxies_before = len(proxies)
 proxies = set([proxy for proxy in proxies if proxy.strip()])
 
 # Save the list of unique proxies to a file
-with open(PROXY_LIST_FILE, 'w') as f:
-    f.writelines([f'{proxy}\n' for proxy in proxies])
+if not proxy_types:
+    with open(PROXY_LIST_FILE, 'w') as f:
+        f.writelines([f'{proxy}\n' for proxy in proxies])
 
 num_proxies_after = len(proxies)
 
-print(f"[+] Fetched and saved {num_proxies_before} proxies to {PROXY_LIST_FILE}")
-print(f"[-] Removed {num_proxies_before - num_proxies_after} duplicates, {num_proxies_after} unique proxies remaining\n")
+if not proxy_types:
+    print(f"[+] Fetched and saved {num_proxies_before} proxies to {PROXY_LIST_FILE}")
+    print(f"[-] Removed {num_proxies_before - num_proxies_after} duplicates, {num_proxies_after} unique proxies remaining\n")
+else:
+    print(f"[+] Fetched proxies. Writing output to files based on the parameter...\n")
 
 # Define the URLs to use for testing proxies
 TEST_HTTP_URL = 'http://httpbin.org/ip'
@@ -132,7 +141,7 @@ working_socks4_proxies = {}
 working_socks5_proxies = {}
 
 # Define a function to test the availability of a proxy for a given protocol
-def test_proxy(proxy, protocol):
+def test_proxy(proxy, protocol, proxy_types):
     proxies = {protocol: proxy}
     try:
         if protocol.startswith('http') or protocol.startswith('https') or protocol.startswith('socks4') or protocol.startswith('socks5'):
@@ -151,18 +160,32 @@ def test_proxy(proxy, protocol):
             ip_address = extract_ip(response.content.decode())
             if ip_address is not None and ip_address != '':
                 if ip_address == proxy.split(':')[0]:
-                    if protocol == 'http':
+                    if '-http' in proxy_types and protocol == 'http':
                         working_http_proxies[proxy] = ip_address
                         print(f'[+] Found HTTP Proxy: {proxy}')
-                    elif protocol == 'https':
+                    elif '-https' in proxy_types and protocol == 'https':
                         working_https_proxies[proxy] = ip_address
                         print(f'[+] Found HTTPS Proxy: {proxy}')
-                    elif protocol == 'socks4':
+                    elif '-s4' in proxy_types and protocol == 'socks4':
                         working_socks4_proxies[proxy] = ip_address
                         print(f'[+] Found SOCKS4 Proxy: {proxy}')
-                    elif protocol == 'socks5':
+                    elif '-s5' in proxy_types and protocol == 'socks5':
                         working_socks5_proxies[proxy] = ip_address
                         print(f'[+] Found SOCKS5 Proxy: {proxy}')
+                    elif not proxy_types:
+                        # If no proxy types are specified, add all proxies to the list
+                        if protocol == 'http':
+                            working_http_proxies[proxy] = ip_address
+                            print(f'[+] Found HTTP Proxy: {proxy}')
+                        elif protocol == 'https':
+                            working_https_proxies[proxy] = ip_address
+                            print(f'[+] Found HTTPS Proxy: {proxy}')
+                        elif protocol == 'socks4':
+                            working_socks4_proxies[proxy] = ip_address
+                            print(f'[+] Found SOCKS4 Proxy: {proxy}')
+                        elif protocol == 'socks5':
+                            working_socks5_proxies[proxy] = ip_address
+                            print(f'[+] Found SOCKS5 Proxy: {proxy}')
                     return True
             return False
     except:
@@ -182,19 +205,23 @@ with ThreadPoolExecutor(max_workers=1000) as executor:
         else:
             # Test all protocols if no specific protocol is selected
             for protocol in ['socks4', 'socks5', 'https', 'http']:
-                executor.submit(test_proxy, proxy, protocol)
+                executor.submit(test_proxy, proxy, protocol, proxy_types)
             break  # exit the loop after submitting all jobs
 
-        executor.submit(test_proxy, proxy, protocol)
+        executor.submit(test_proxy, proxy, protocol, proxy_types)
 
 # Save the working proxies to separate files based on their protocol
-with open('http.txt', 'a') as f:
-    f.writelines([f'{proxy}\n' for proxy in working_http_proxies.keys()])
-with open('https.txt', 'a') as f:
-    f.writelines([f'{proxy}\n' for proxy in working_https_proxies.keys()])
-with open('socks4.txt', 'a') as f:
-    f.writelines([f'{proxy}\n' for proxy in working_socks4_proxies.keys()])
-with open('socks5.txt', 'a') as f:
-    f.writelines([f'{proxy}\n' for proxy in working_socks5_proxies.keys()])
+if '-http' in proxy_types:
+    with open('http.txt', 'w') as f:
+        f.writelines([f'{proxy}\n' for proxy in working_http_proxies.keys()])
+if '-https' in proxy_types:
+    with open('https.txt', 'w') as f:
+        f.writelines([f'{proxy}\n' for proxy in working_https_proxies.keys()])
+if '-s4' in proxy_types:
+    with open('socks4.txt', 'w') as f:
+        f.writelines([f'{proxy}\n' for proxy in working_socks4_proxies.keys()])
+if '-s5' in proxy_types:
+    with open('socks5.txt', 'w') as f:
+        f.writelines([f'{proxy}\n' for proxy in working_socks5_proxies.keys()])
 
 print('\n[*] Testing complete. Results saved to http.txt, https.txt, socks4.txt, and socks5.txt')
