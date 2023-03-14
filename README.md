@@ -68,7 +68,11 @@ To run this script, you will need to have Python 3.x installed on your computer,
 You can install these packages using pip, the package installer for Python. To install the packages, open a command prompt or terminal and type the following commands:
 
 ```
-pip install requests beautifulsoup4 PySocks
+pip3 install requests beautifulsoup4 PySocks
+```
+or
+```
+pip3 install -r requirements.txt
 ```
 
 <p align="center"><a href=#top>Back to Top</a></p>
