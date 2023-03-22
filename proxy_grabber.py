@@ -9,29 +9,29 @@ from bs4 import BeautifulSoup
 
 # Define the URLs to use for grabbing proxy lists
 PROXY_LIST_URLS = [
-#    'https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http',
+    'https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http',
     'https://api.proxyscrape.com/v2/?request=displayproxies&protocol=https',
-#    'https://api.proxyscrape.com/v2/?request=displayproxies&protocol=socks4',
-#    'https://api.proxyscrape.com/v2/?request=displayproxies&protocol=socks5',
-#    'https://free-proxy-list.net/',
-#    'https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/proxy.txt',
-#    'https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/socks4.txt',
-#    'https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/socks5.txt',
-#    'https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/http.txt',
-#    'https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/socks4.txt',
-#    'https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/socks5.txt',
-#    'https://raw.githubusercontent.com/hookzof/socks5_list/master/proxy.txt',
-#    'https://raw.githubusercontent.com/jetkai/proxy-list/main/online-proxies/txt/proxies-http.txt',
-#    'https://raw.githubusercontent.com/jetkai/proxy-list/main/online-proxies/txt/proxies-https.txt',
-#    'https://raw.githubusercontent.com/jetkai/proxy-list/main/online-proxies/txt/proxies-socks4.txt',
-#    'https://raw.githubusercontent.com/jetkai/proxy-list/main/online-proxies/txt/proxies-socks5.txt',
-#    'https://raw.githubusercontent.com/jetkai/proxy-list/main/online-proxies/txt/proxies.txt',
-#    'https://raw.githubusercontent.com/mertguvencli/http-proxy-list/main/proxy-list/data.txt',
-#    'https://raw.githubusercontent.com/roosterkid/openproxylist/main/HTTPS_RAW.txt',
-#    'https://raw.githubusercontent.com/roosterkid/openproxylist/main/SOCKS4_RAW.txt',
-#    'https://raw.githubusercontent.com/roosterkid/openproxylist/main/SOCKS5_RAW.txt',
-#    'https://raw.githubusercontent.com/sunny9577/proxy-scraper/master/proxies.txt',
-#    'https://www.proxy-list.download/api/v1/get?type=https'
+    'https://api.proxyscrape.com/v2/?request=displayproxies&protocol=socks4',
+    'https://api.proxyscrape.com/v2/?request=displayproxies&protocol=socks5',
+    'https://free-proxy-list.net/',
+    'https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/proxy.txt',
+    'https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/socks4.txt',
+    'https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/socks5.txt',
+    'https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/http.txt',
+    'https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/socks4.txt',
+    'https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/socks5.txt',
+    'https://raw.githubusercontent.com/hookzof/socks5_list/master/proxy.txt',
+    'https://raw.githubusercontent.com/jetkai/proxy-list/main/online-proxies/txt/proxies-http.txt',
+    'https://raw.githubusercontent.com/jetkai/proxy-list/main/online-proxies/txt/proxies-https.txt',
+    'https://raw.githubusercontent.com/jetkai/proxy-list/main/online-proxies/txt/proxies-socks4.txt',
+    'https://raw.githubusercontent.com/jetkai/proxy-list/main/online-proxies/txt/proxies-socks5.txt',
+    'https://raw.githubusercontent.com/jetkai/proxy-list/main/online-proxies/txt/proxies.txt',
+    'https://raw.githubusercontent.com/mertguvencli/http-proxy-list/main/proxy-list/data.txt',
+    'https://raw.githubusercontent.com/roosterkid/openproxylist/main/HTTPS_RAW.txt',
+    'https://raw.githubusercontent.com/roosterkid/openproxylist/main/SOCKS4_RAW.txt',
+    'https://raw.githubusercontent.com/roosterkid/openproxylist/main/SOCKS5_RAW.txt',
+    'https://raw.githubusercontent.com/sunny9577/proxy-scraper/master/proxies.txt',
+    'https://www.proxy-list.download/api/v1/get?type=https'
 ]
 
 # Define the filename to save the proxy list to
@@ -224,4 +224,23 @@ if '-s5' in proxy_types:
     with open('socks5.txt', 'w') as f:
         f.writelines([f'{proxy}\n' for proxy in working_socks5_proxies.keys()])
 
-print('\n[*] Testing complete. Results saved to http.txt, https.txt, socks4.txt, and socks5.txt')
+# Print the message indicating the types and number of proxies found
+num_http_proxies = len(working_http_proxies)
+num_https_proxies = len(working_https_proxies)
+num_socks4_proxies = len(working_socks4_proxies)
+num_socks5_proxies = len(working_socks5_proxies)
+
+if num_http_proxies > 0 and num_https_proxies == 0 and num_socks4_proxies == 0 and num_socks5_proxies == 0:
+    message = f"\n[*] Testing complete. {num_http_proxies} HTTP proxies found! Results saved to http.txt"
+elif num_https_proxies > 0 and num_http_proxies == 0 and num_socks4_proxies == 0 and num_socks5_proxies == 0:
+    message = f"\n[*] Testing complete. {num_https_proxies} HTTPS proxies found! Results saved to https.txt"
+elif num_socks4_proxies > 0 and num_socks5_proxies == 0 and num_http_proxies == 0 and num_https_proxies == 0:
+    message = f"\n[*] Testing complete. {num_socks4_proxies} SOCKS4 proxies found! Results saved to socks4.txt"
+elif num_socks5_proxies > 0 and num_socks4_proxies == 0 and num_http_proxies == 0 and num_https_proxies == 0:
+    message = f"\n[*] Testing complete. {num_socks5_proxies} SOCKS5 proxies found! Results saved to socks5.txt"
+elif num_http_proxies == 0 and num_https_proxies == 0 and num_socks4_proxies == 0 and num_socks5_proxies == 0:
+    message = "\n[*] Testing complete. No proxies found."
+else:
+    message = ""
+
+print(message)
